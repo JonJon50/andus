@@ -1,11 +1,11 @@
 <header class="border-b bg-white">
     <nav class="mx-auto max-w-6xl px-6">
         <div class="flex items-center justify-between py-4">
-            <a href="{{ route('home') }}" class="text-lg font-black text-gray-900 sm:text-xl">
+            <a href="{{ route('home') }}" class="text-xl font-black tracking-tight text-gray-900">
                 AndUs LLC
             </a>
 
-            <div class="hidden items-center gap-6 text-sm font-semibold text-gray-900 md:flex">
+            <div class="hidden items-center gap-7 text-sm font-semibold text-gray-900 md:flex">
                 <a href="{{ route('home') }}" class="transition hover:text-blue-600">
                     Home
                 </a>

@@ -9,19 +9,19 @@
                 </p>
 
                 <h1 class="text-4xl font-black text-gray-900">
-                    Services built around smarter business systems.
+                    Practical digital services built for growing businesses.
                 </h1>
 
                 <p class="mx-auto mt-4 max-w-2xl text-gray-600">
-                    We help businesses build better websites, automate workflows,
-                    organize data, and create systems that support growth.
+                    We help businesses improve their websites, automate repetitive tasks,
+                    organize data, and build systems that make daily operations easier.
                 </p>
             </div>
 
             <livewire:services-list />
 
             <div class="mt-12 text-center">
-                <a href="/contact"
+                <a href="{{ route('contact') }}"
                    class="rounded bg-gray-900 px-6 py-3 font-semibold text-white hover:bg-black">
                     Start a Project
                 </a>

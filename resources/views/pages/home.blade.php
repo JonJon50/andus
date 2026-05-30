@@ -5,25 +5,26 @@
         <div class="mx-auto grid min-h-[70vh] max-w-6xl items-center gap-10 px-6 py-20 md:grid-cols-2">
             <div>
                 <p class="mb-4 text-sm font-bold uppercase tracking-widest text-blue-600">
-                    AI Automation • Web Apps • Data Systems
+                    Websites • AI Automation • Data Systems
                 </p>
 
                 <h1 class="mb-6 text-5xl font-black leading-tight tracking-tight text-gray-900">
-                    AndUs builds smarter digital systems for growing businesses.
+                    AndUs builds practical digital systems for growing businesses.
                 </h1>
 
-                <p class="mb-8 text-lg text-gray-600">
-                    We develop AI-powered automation, data infrastructure, analytics systems,
-                    and modern web applications using Laravel, Livewire, React, Next.js,
-                    MERN, MySQL, and MariaDB.
+                <p class="mb-8 text-lg leading-8 text-gray-600">
+                    We help businesses improve their online presence, automate repetitive work,
+                    organize data, and build tools that make daily operations easier.
                 </p>
 
-                <div class="flex gap-4">
-                    <a href="/contact" class="rounded bg-gray-900 px-6 py-3 font-semibold text-white">
+                <div class="flex flex-wrap gap-4">
+                    <a href="{{ route('contact') }}"
+                       class="rounded bg-gray-900 px-6 py-3 font-semibold text-white transition hover:bg-black">
                         Get a Quote
                     </a>
 
-                    <a href="/services" class="rounded border px-6 py-3 font-semibold text-gray-900">
+                    <a href="{{ route('services') }}"
+                       class="rounded border border-gray-900 px-6 py-3 font-semibold text-gray-900 transition hover:bg-gray-900 hover:text-white">
                         View Services
                     </a>
                 </div>
@@ -31,32 +32,24 @@
 
             <div class="rounded-2xl border bg-gray-50 p-8 shadow-sm">
                 <h2 class="mb-4 text-2xl font-bold text-gray-900">
-                    What We Build
+                    What We Help With
                 </h2>
 
                 <div class="grid gap-4">
                     <div class="rounded-xl bg-white p-4 shadow-sm">
-                        AI Automation / Prompting Systems
+                        Business Website Development
                     </div>
 
                     <div class="rounded-xl bg-white p-4 shadow-sm">
-                        Laravel & Livewire Applications
+                        Custom Web Applications
                     </div>
 
                     <div class="rounded-xl bg-white p-4 shadow-sm">
-                        React & Next.js Websites
+                        Workflow Automation
                     </div>
 
                     <div class="rounded-xl bg-white p-4 shadow-sm">
-                        MERN Stack Development
-                    </div>
-
-                    <div class="rounded-xl bg-white p-4 shadow-sm">
-                        MySQL & MariaDB Database Solutions
-                    </div>
-
-                    <div class="rounded-xl bg-white p-4 shadow-sm">
-                        Data Analytics & Reporting
+                        Database & Reporting Solutions
                     </div>
                 </div>
             </div>

@@ -13,6 +13,8 @@ class ServicesList extends Component
         return view('livewire.services-list', [
             'services' => Service::where('is_active', true)
                 ->orderBy('sort_order')
+                  ->limit(4)
+                
                 ->get(),
         ]);
     }

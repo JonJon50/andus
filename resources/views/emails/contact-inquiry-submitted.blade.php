@@ -20,6 +20,7 @@
         <p><strong>Email:</strong> {{ $inquiry->email }}</p>
         <p><strong>Phone:</strong> {{ $inquiry->phone ?: 'Not provided' }}</p>
         <p><strong>Company:</strong> {{ $inquiry->company ?: 'Not provided' }}</p>
+
         <p>
             <strong>Service Interested In:</strong>
             {{ $inquiry->service?->title ?: 'No service selected' }}
@@ -34,7 +35,8 @@
         <hr style="margin: 24px 0; border: 0; border-top: 1px solid #e2e8f0;">
 
         <p style="font-size: 13px; color: #64748b;">
-            Inquiry received on {{ $inquiry->created_at->format('F j, Y \a\t g:i A') }}.
+            Inquiry received on
+            {{ optional($inquiry->created_at)->format('F j, Y \a\t g:i A') ?? now()->format('F j, Y \a\t g:i A') }}.
         </p>
     </div>
 </body>

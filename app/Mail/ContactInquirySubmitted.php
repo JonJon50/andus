@@ -14,9 +14,11 @@ class ContactInquirySubmitted extends Mailable
 {
     use Queueable, SerializesModels;
 
-    public function __construct(public ContactInquiry $inquiry)
+    public function __construct(public mixed $inquiry)
     {
-        $this->inquiry->load('service');
+        if ($this->inquiry instanceof ContactInquiry) {
+            $this->inquiry->load('service');
+        }
     }
 
     public function envelope(): Envelope

@@ -1,7 +1,7 @@
 <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:p-10">
     @if ($submitted)
         <div class="mb-8 rounded-lg border border-green-200 bg-green-50 px-5 py-4 text-sm text-green-800">
-            Thank you for contacting Andus. Your inquiry has been received.
+            Thank you for contacting AndUs. Your inquiry has been received.
         </div>
     @endif
 
@@ -89,7 +89,7 @@
 
             <select
                 id="service_id"
-                wire:model="service_id"
+                wire:model.live="service_id"
                 class="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-blue-700"
             >
                 <option value="">Select a service</option>
@@ -105,6 +105,58 @@
                 <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
             @enderror
         </div>
+
+        @if ($selectedService)
+            <div class="rounded-2xl border border-blue-100 bg-blue-50 p-5 shadow-sm transition">
+                <div class="flex items-start gap-4">
+                    <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-700 text-sm font-bold text-white">
+                        AI
+                    </div>
+
+                    <div>
+                        <p class="text-sm font-bold uppercase tracking-widest text-blue-700">
+                            Smart Project Guidance
+                        </p>
+
+                        <h3 class="mt-1 text-lg font-bold text-slate-900">
+                            {{ $servicePrompt['title'] }}
+                        </h3>
+
+                        <p class="mt-2 text-sm leading-6 text-slate-700">
+                            {{ $servicePrompt['description'] }}
+                        </p>
+
+                        <div class="mt-4 rounded-xl bg-white p-4">
+                            <p class="text-sm font-semibold text-slate-900">
+                                Helpful details to include in your message:
+                            </p>
+
+                            <ul class="mt-3 space-y-2 text-sm text-slate-600">
+                                @foreach ($servicePrompt['questions'] as $question)
+                                    <li>
+                                        • {{ $question }}
+                                    </li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        @else
+            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+                <p class="text-sm font-bold uppercase tracking-widest text-slate-500">
+                    Smart Project Guidance
+                </p>
+
+                <h3 class="mt-1 text-lg font-bold text-slate-900">
+                    {{ $servicePrompt['title'] }}
+                </h3>
+
+                <p class="mt-2 text-sm leading-6 text-slate-600">
+                    {{ $servicePrompt['description'] }}
+                </p>
+            </div>
+        @endif
 
         <div>
             <label for="message" class="mb-2 block text-sm font-semibold text-slate-900">
@@ -133,7 +185,7 @@
             </span>
 
             <span wire:loading wire:target="save">
-                Saving...
+                Sending...
             </span>
         </button>
     </form>

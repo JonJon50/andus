@@ -181,6 +181,8 @@ The environment example defines `CONTACT_TO_ADDRESS`, but the mail configuration
 
 **Priority:** P0
 
+**Investigation status:** Implementation is not finalized. Production database availability/configuration remains unresolved, and production service records have not been verified. The canonical-service migration is deferred. Production-only hard-coded service handling remains a known issue. No production changes were made. Further provisioning investigation is paused for this artifact.
+
 **Problem**
 
 Production uses hard-coded service objects with IDs 1–4, while local development reads the `services` table. If the corresponding production rows do not exist, saving an inquiry can violate the foreign-key constraint. The exception is caught, but the lead may never be stored.
@@ -201,6 +203,14 @@ Production uses hard-coded service objects with IDs 1–4, while local developme
 ### 7. Complete an end-to-end inquiry test
 
 **Priority:** P0
+
+**Local verification scope:** `tests/Feature/ContactInquiryFlowTest.php` covers validation, selected-service persistence, notification addressing/reply-to, rendered email content, and existing failure behavior using an isolated in-memory database, fake mail, and Laravel's in-memory array mailer. Application behavior is unchanged; production verification remains pending.
+
+**Local verification results:** The focused inquiry-flow suite passed 25 tests with 350 assertions. The full suite passed 41 tests with 430 assertions. Laravel Pint ran on the new PHP test file. These results establish local coverage only and do not satisfy the production acceptance criteria below.
+
+**Known acceptance gaps:** A persistence failure followed by successful mail currently displays the ordinary success message without storing the inquiry. Mail failure propagates without a custom inline submission error, and any already-stored inquiry remains. A previous success banner can remain visible after a later failed submission. Database failure logs include visitor email and exception details. These tests characterize current behavior rather than endorse it as dependable lead capture.
+
+**Production limit:** No production inquiry was submitted, database records were not inspected or changed, and inbox receipt was not verified. Local fake/array mail tests cannot prove external delivery or a browser-to-production-database-to-inbox trace. Step 7's production end-to-end acceptance criteria remain unmet. No Render, environment, or deployment changes were made.
 
 **Action**
 

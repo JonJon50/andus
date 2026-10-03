@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Livewire\Component;
+use RuntimeException;
 
 class ContactForm extends Component
 {
@@ -155,6 +156,12 @@ class ContactForm extends Component
     {
         $validated = $this->validate();
 
+        $recipient = config('mail.contact_to');
+
+        if (! is_string($recipient) || trim($recipient) === '') {
+            throw new RuntimeException('Inquiry recipient is not configured. Set CONTACT_TO_EMAIL.');
+        }
+
         $validated['service_id'] = $validated['service_id'] ?: null;
         $validated['status'] = 'new';
 
@@ -180,7 +187,7 @@ class ContactForm extends Component
             ];
         }
 
-        Mail::to(config('mail.contact_to'))
+        Mail::to($recipient)
             ->send(new ContactInquirySubmitted($inquiry));
 
         $this->reset([

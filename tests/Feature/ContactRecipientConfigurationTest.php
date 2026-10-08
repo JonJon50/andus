@@ -75,7 +75,7 @@ class ContactRecipientConfigurationTest extends TestCase
         }
 
         $this->assertDatabaseCount('contact_inquiries', 0);
-        Mail::assertNothingSent();
+        Mail::assertNothingOutgoing();
         $this->assertFalse($form->instance()->submitted);
         $this->assertSame('Test Visitor', $form->instance()->name);
     }
@@ -113,8 +113,9 @@ class ContactRecipientConfigurationTest extends TestCase
             'service_id' => null,
             'status' => 'new',
         ]);
-        Mail::assertSent(ContactInquirySubmitted::class, 1);
-        Mail::assertSent(ContactInquirySubmitted::class, fn ($mail) => $mail->hasTo('inquiries@example.test'));
+        Mail::assertNothingSent();
+        Mail::assertQueued(ContactInquirySubmitted::class, 1);
+        Mail::assertQueued(ContactInquirySubmitted::class, fn ($mail) => $mail->hasTo('inquiries@example.test'));
     }
 
     private function validForm(): Testable

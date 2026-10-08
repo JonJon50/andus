@@ -8,7 +8,9 @@ use App\Models\ContactInquiry;
 use App\Models\Service;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Mail\PendingMail;
+use Illuminate\Mail\SendQueuedMailable;
 use Illuminate\Mail\Transport\ArrayTransport;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Livewire\Features\SupportTesting\Testable;
@@ -54,7 +56,7 @@ class ContactInquiryFlowTest extends TestCase
         $form->assertSee($error);
 
         $this->assertDatabaseCount('contact_inquiries', 0);
-        Mail::assertNothingSent();
+        Mail::assertNothingOutgoing();
     }
 
     public static function invalidInputs(): array
@@ -95,11 +97,12 @@ class ContactInquiryFlowTest extends TestCase
 
         $this->assertDatabaseCount('contact_inquiries', 2);
         $this->assertDatabaseHas('contact_inquiries', ['service_id' => null, 'phone' => '', 'company' => '']);
-        Mail::assertSent(ContactInquirySubmitted::class, 2);
+        Mail::assertNothingSent();
+        Mail::assertQueued(ContactInquirySubmitted::class, 2);
     }
 
     #[DataProvider('serviceSelections')]
-    public function test_successful_submission_persists_details_and_notifies_the_recipient(?string $title, ?string $slug): void
+    public function test_successful_submission_persists_details_and_queues_the_notification(?string $title, ?string $slug): void
     {
         Mail::fake();
         $service = $title === null ? null : $this->createService($title, $slug);
@@ -128,9 +131,9 @@ class ContactInquiryFlowTest extends TestCase
             'status' => 'new',
         ]);
 
-        Mail::assertSent(ContactInquirySubmitted::class, 1);
-        Mail::assertNothingQueued();
-        Mail::assertSent(ContactInquirySubmitted::class, function (ContactInquirySubmitted $mail) use ($service): bool {
+        Mail::assertNothingSent();
+        Mail::assertQueued(ContactInquirySubmitted::class, 1);
+        Mail::assertQueued(ContactInquirySubmitted::class, function (ContactInquirySubmitted $mail) use ($service): bool {
             $this->assertTrue($mail->hasTo('inquiries@example.test'));
             $this->assertTrue($mail->inquiry->exists);
             $this->assertSame(ContactInquiry::sole()->id, $mail->inquiry->id);
@@ -165,10 +168,10 @@ class ContactInquiryFlowTest extends TestCase
             ->assertDontSee(self::SUCCESS_MESSAGE);
 
         $this->assertDatabaseCount('contact_inquiries', 0);
-        Mail::assertNothingSent();
+        Mail::assertNothingOutgoing();
     }
 
-    public function test_persistence_failure_currently_sends_fallback_mail_and_shows_success(): void
+    public function test_persistence_failure_currently_queues_fallback_mail_and_shows_success(): void
     {
         Mail::fake();
         Log::spy();
@@ -186,8 +189,9 @@ class ContactInquiryFlowTest extends TestCase
 
         $this->assertDatabaseCount('contact_inquiries', 0);
         $this->assertPersistenceFailureLogged();
-        Mail::assertSent(ContactInquirySubmitted::class, 1);
-        Mail::assertSent(ContactInquirySubmitted::class, function (ContactInquirySubmitted $mail) use ($service): bool {
+        Mail::assertNothingSent();
+        Mail::assertQueued(ContactInquirySubmitted::class, 1);
+        Mail::assertQueued(ContactInquirySubmitted::class, function (ContactInquirySubmitted $mail) use ($service): bool {
             $this->assertNotInstanceOf(ContactInquiry::class, $mail->inquiry);
             $this->assertSame('Test Visitor', $mail->inquiry->name);
             $this->assertSame('Please help with our website project.', $mail->inquiry->message);
@@ -200,12 +204,12 @@ class ContactInquiryFlowTest extends TestCase
         });
     }
 
-    public function test_mail_failure_after_persistence_propagates_and_retains_input(): void
+    public function test_queue_dispatch_failure_after_persistence_propagates_and_retains_input(): void
     {
-        $this->simulateMailFailure();
+        $this->simulateQueueDispatchFailure();
         $form = $this->validForm();
 
-        $this->assertMailFailure($form);
+        $this->assertQueueDispatchFailure($form);
 
         $this->assertDatabaseCount('contact_inquiries', 1);
         $this->assertDatabaseHas('contact_inquiries', ['email' => 'visitor@example.test', 'status' => 'new']);
@@ -214,14 +218,14 @@ class ContactInquiryFlowTest extends TestCase
         $this->assertSame('Please help with our website project.', $form->instance()->message);
     }
 
-    public function test_combined_failure_propagates_without_storing_an_inquiry(): void
+    public function test_persistence_and_queue_dispatch_failure_propagates_without_storing_an_inquiry(): void
     {
         Log::spy();
         $this->simulatePersistenceFailure();
-        $this->simulateMailFailure();
+        $this->simulateQueueDispatchFailure();
         $form = $this->validForm();
 
-        $this->assertMailFailure($form);
+        $this->assertQueueDispatchFailure($form);
 
         $this->assertDatabaseCount('contact_inquiries', 0);
         $this->assertPersistenceFailureLogged();
@@ -246,13 +250,15 @@ class ContactInquiryFlowTest extends TestCase
             ->assertSet('name', 'Another Visitor');
 
         $this->assertDatabaseCount('contact_inquiries', 1);
-        Mail::assertSent(ContactInquirySubmitted::class, 1);
+        Mail::assertNothingSent();
+        Mail::assertQueued(ContactInquirySubmitted::class, 1);
     }
 
     #[DataProvider('serviceSelections')]
-    public function test_array_mailer_builds_and_renders_the_actual_notification(?string $title, ?string $slug): void
+    public function test_sync_queue_and_array_mailer_deliver_the_actual_notification(?string $title, ?string $slug): void
     {
         $service = $title === null ? null : $this->createService($title, $slug);
+        config(['queue.default' => 'sync']);
         $transport = Mail::mailer('array')->getSymfonyTransport();
         $this->assertInstanceOf(ArrayTransport::class, $transport);
 
@@ -275,6 +281,72 @@ class ContactInquiryFlowTest extends TestCase
         }
 
         $this->assertDatabaseCount('contact_inquiries', 1);
+    }
+
+    public function test_notification_is_enqueued_after_commit_with_the_approved_retry_policy(): void
+    {
+        config([
+            'queue.default' => 'database',
+            'queue.connections.database.connection' => config('database.default'),
+            'queue.connections.database.table' => 'jobs',
+        ]);
+        $transport = Mail::mailer('array')->getSymfonyTransport();
+
+        DB::transaction(function () use ($transport): void {
+            $this->validForm()
+                ->call('save')
+                ->assertHasNoErrors()
+                ->assertSet('submitted', true)
+                ->assertSee(self::SUCCESS_MESSAGE);
+
+            $this->assertDatabaseCount('contact_inquiries', 1);
+            $this->assertDatabaseCount('jobs', 0);
+            $this->assertCount(0, $transport->messages());
+        });
+
+        $this->assertDatabaseCount('jobs', 1);
+        $this->assertCount(0, $transport->messages());
+
+        $payload = json_decode(DB::table('jobs')->sole()->payload, true, flags: JSON_THROW_ON_ERROR);
+        $job = unserialize($payload['data']['command']);
+        $this->assertInstanceOf(SendQueuedMailable::class, $job);
+        $this->assertTrue($job->afterCommit);
+        $this->assertSame(3, $job->tries);
+        $this->assertSame(60, $job->timeout);
+        $this->assertSame([60, 300], $job->backoff());
+
+        $job->handle(Mail::getFacadeRoot());
+
+        $this->assertCount(1, $transport->messages());
+        $message = $transport->messages()->sole()->getOriginalMessage();
+        $this->assertSame('inquiries@example.test', $message->getTo()[0]->getAddress());
+        $this->assertSame('visitor@example.test', $message->getReplyTo()[0]->getAddress());
+    }
+
+    public function test_rolled_back_inquiry_does_not_enqueue_or_deliver_a_notification(): void
+    {
+        config([
+            'queue.default' => 'database',
+            'queue.connections.database.connection' => config('database.default'),
+            'queue.connections.database.table' => 'jobs',
+        ]);
+        $transport = Mail::mailer('array')->getSymfonyTransport();
+
+        try {
+            DB::transaction(function (): void {
+                $this->validForm()->call('save')->assertHasNoErrors();
+                $this->assertDatabaseCount('jobs', 0);
+
+                throw new RuntimeException('Simulated transaction rollback.');
+            });
+            $this->fail('The test transaction must roll back.');
+        } catch (RuntimeException $exception) {
+            $this->assertSame('Simulated transaction rollback.', $exception->getMessage());
+        }
+
+        $this->assertDatabaseCount('contact_inquiries', 0);
+        $this->assertDatabaseCount('jobs', 0);
+        $this->assertCount(0, $transport->messages());
     }
 
     private function validForm(): Testable
@@ -300,24 +372,24 @@ class ContactInquiryFlowTest extends TestCase
         });
     }
 
-    private function simulateMailFailure(): void
+    private function simulateQueueDispatchFailure(): void
     {
         $pending = Mockery::mock(PendingMail::class);
         $pending->shouldReceive('send')
             ->once()
             ->with(Mockery::type(ContactInquirySubmitted::class))
-            ->andThrow(new RuntimeException('Simulated mail failure.'));
+            ->andThrow(new RuntimeException('Simulated queue dispatch failure.'));
 
         Mail::shouldReceive('to')->once()->with('inquiries@example.test')->andReturn($pending);
     }
 
-    private function assertMailFailure(Testable $form): void
+    private function assertQueueDispatchFailure(Testable $form): void
     {
         try {
             $form->call('save');
-            $this->fail('The current mail failure must propagate.');
+            $this->fail('The current queue dispatch failure must propagate.');
         } catch (RuntimeException $exception) {
-            $this->assertSame('Simulated mail failure.', $exception->getMessage());
+            $this->assertSame('Simulated queue dispatch failure.', $exception->getMessage());
         }
     }
 

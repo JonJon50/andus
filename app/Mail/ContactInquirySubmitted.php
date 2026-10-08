@@ -4,15 +4,22 @@ namespace App\Mail;
 
 use App\Models\ContactInquiry;
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueueAfterCommit;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Address;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 
-class ContactInquirySubmitted extends Mailable
+class ContactInquirySubmitted extends Mailable implements ShouldQueueAfterCommit
 {
     use Queueable, SerializesModels;
+
+    public int $tries = 3;
+
+    public int $timeout = 60;
+
+    public array $backoff = [60, 300];
 
     public function __construct(public mixed $inquiry)
     {
